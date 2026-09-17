@@ -58,3 +58,11 @@ yarn-error.log*
 /*.bat
 /*.ico
 /tunnel-client.exe
+
+/0){skip--
+/CLAUDE.md
+/Install-Aphirat-CGPT-Tunnel.ps1
+/aphirat-tunnel-logo.svg
+/readme.txt
+/scripts/tmp_check_notify.ts
+/tmp_check_notify.ts
