@@ -1,0 +1,6 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/modules/identity/session";
+import { hasPermission } from "@/lib/authorization";
+import { prisma } from "@/lib/prisma";
+import MeetingBookingStatusManager from "@/components/meeting-booking-status-manager";
+export default async function Page(){const user=await getCurrentUser();if(!user)redirect("/login");const admin=user.roles.some(({role})=>["SUPER_ADMIN","ADMIN"].includes(role.key));if(!admin&&!await hasPermission(user.id,"APPROVE_MEETING_BOOKINGS"))redirect("/portal/meeting-rooms");const rows=await prisma.meetingBooking.findMany({where:{status:{in:["APPROVED","COMPLETED"]}},orderBy:{startAt:"asc"},include:{room:{select:{nameTh:true}},requester:{select:{nameTh:true,firstnameTh:true,lastnameTh:true}},preparedBy:{select:{nameTh:true,firstnameTh:true,lastnameTh:true}}}});return <section><div className="mb-6"><p className="text-sm font-bold tracking-[0.14em] text-teal-700">BOOKING STATUS</p><h1 className="mt-1 text-3xl font-black text-slate-900">จัดการสถานะการจองห้องประชุม</h1><p className="mt-2 text-sm text-slate-500">เมื่ออนุมัติแล้ว ผู้ที่กดอนุมัติจะเป็นผู้รับผิดชอบการเตรียมห้อง และต้องอัปเดตสถานะจนเสร็จสิ้น</p></div><MeetingBookingStatusManager initialRows={rows} userId={user.id}/></section>}

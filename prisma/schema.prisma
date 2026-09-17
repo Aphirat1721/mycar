@@ -1,0 +1,632 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Application {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId         String            @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String            @unique @db.VarChar(50)
+  nameTh           String            @db.VarChar(200)
+  description      String?           @db.VarChar(500)
+  iconKey          String?           @db.VarChar(80)
+  basePath         String?           @db.VarChar(200)
+  status           MasterStatus      @default(ACTIVE)
+  sortOrder        Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  permissions      Permission[]
+  roles            Role[]
+  userApplications UserApplication[]
+
+  @@index([status, sortOrder])
+}
+
+model AuditLog {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId   String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String?     @db.Uuid
+  action     String      @db.VarChar(120)
+  resource   String      @db.VarChar(120)
+  resourceId String?     @db.VarChar(120)
+  result     AuditResult
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+  user       User?       @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([resource, createdAt])
+  @@index([userId, createdAt])
+}
+
+model Department {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId        String           @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String           @unique @db.VarChar(30)
+  nameTh          String           @db.VarChar(200)
+  abbreviation    String?          @db.VarChar(30)
+  status          MasterStatus     @default(ACTIVE)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+  users           User[]
+  vehicleRequests VehicleRequest[]
+  meetingRooms    MeetingRoom[]
+  meetingBookings MeetingBooking[]
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model Driver {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId        String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName       String
+  lastName        String
+  nickname        String?
+  photoPath       String?
+  status          MasterStatus       @default(ACTIVE)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  deletedAt       DateTime?
+  userId          String?            @unique @db.Uuid
+  user            User?              @relation(fields: [userId], references: [id])
+  evaluations     DriverEvaluation[]
+  vehicleRequests VehicleRequest[]
+  usageLogs       VehicleUsageLog[]
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model DriverEvaluation {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId         String         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vehicleRequestId String         @unique @db.Uuid
+  driverId         String         @db.Uuid
+  evaluatorId      String         @db.Uuid
+  rating           Int
+  feedback         String?        @db.VarChar(255)
+  acknowledgedAt   DateTime?
+  acknowledgedById String?        @db.Uuid
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  acknowledgedBy   User?          @relation("DriverEvaluation_acknowledgedByIdToUser", fields: [acknowledgedById], references: [id])
+  driver           Driver         @relation(fields: [driverId], references: [id])
+  evaluator        User           @relation("DriverEvaluation_evaluatorIdToUser", fields: [evaluatorId], references: [id])
+  vehicleRequest   VehicleRequest @relation(fields: [vehicleRequestId], references: [id], onDelete: Cascade)
+
+  @@index([acknowledgedAt])
+  @@index([driverId, createdAt])
+  @@index([evaluatorId, createdAt])
+}
+
+model Organization {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId          String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hcode             String             @unique @db.VarChar(20)
+  nameTh            String             @db.VarChar(300)
+  status            MasterStatus       @default(ACTIVE)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  userOrganizations UserOrganization[]
+
+  @@index([status])
+}
+
+model Permission {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key             PermissionKey
+  nameTh          String
+  applicationId   String?          @db.Uuid
+  application     Application?     @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  rolePermissions RolePermission[]
+
+  @@unique([applicationId, key])
+  @@index([applicationId])
+}
+
+model Role {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key             RoleKey
+  nameTh          String
+  applicationId   String?          @db.Uuid
+  application     Application?     @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([applicationId, key])
+  @@index([applicationId])
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model Session {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash      String    @unique @db.VarChar(64)
+  userId         String    @db.Uuid
+  createdAt      DateTime  @default(now())
+  lastActivityAt DateTime  @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  ipAddress      String?
+  userAgent      String?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+model User {
+  id                      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId                String                @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountIdHash           String                @unique @db.VarChar(64)
+  accountIdCiphertext     String
+  providerIdHash          String?               @unique @db.VarChar(64)
+  providerIdCiphertext    String?
+  cidHash                 String?               @unique @db.VarChar(64)
+  cidCiphertext           String?
+  titleTh                 String?
+  firstnameTh             String?
+  lastnameTh              String?
+  nameTh                  String?
+  position                String?
+  organizationHcode       String?               @db.VarChar(20)
+  organizationName        String?
+  status                  UserStatus            @default(ACTIVE)
+  lastLoginAt             DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  departmentId            String?               @db.Uuid
+  auditLogs               AuditLog[]
+  driver                  Driver?
+  acknowledgedEvaluations DriverEvaluation[]    @relation("DriverEvaluation_acknowledgedByIdToUser")
+  evaluatedDriverRequests DriverEvaluation[]    @relation("DriverEvaluation_evaluatorIdToUser")
+  sessions                Session[]
+  department              Department?           @relation(fields: [departmentId], references: [id])
+  applications            UserApplication[]
+  organizations           UserOrganization[]
+  roles                   UserRole[]
+  vehicleRequests         VehicleRequest[]
+  meetingBookings         MeetingBooking[]      @relation("MeetingBooking_requester")
+  preparedMeetingBookings MeetingBooking[]      @relation("MeetingBooking_preparer")
+  approvedMeetingBookings MeetingBooking[]      @relation("MeetingBooking_approver")
+  meetingEvaluations      MeetingBookingEvaluation[] @relation("MeetingBookingEvaluation_evaluator")
+  notifications           Notification[]
+  providerIdentity        UserProviderIdentity?
+
+  @@index([departmentId])
+  @@index([organizationHcode])
+  @@index([status])
+}
+
+model UserProviderIdentity {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId              String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String    @unique @db.Uuid
+  providerAccountIdHash String    @unique @db.VarChar(64)
+  providerIdHash        String?   @unique @db.VarChar(64)
+  cidHash               String?   @unique @db.VarChar(64)
+  cidCiphertext         String?
+  source                String    @default("PROVIDER_ID") @db.VarChar(50)
+  firstCapturedAt       DateTime?
+  lastVerifiedAt        DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([source, lastVerifiedAt])
+}
+
+model UserApplication {
+  userId        String      @db.Uuid
+  applicationId String      @db.Uuid
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  User          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, applicationId])
+  @@index([applicationId])
+}
+
+model UserOrganization {
+  userId         String       @db.Uuid
+  organizationId String       @db.Uuid
+  position       String?
+  isPrimary      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId, isPrimary])
+}
+
+model UserRole {
+  userId String @db.Uuid
+  roleId String @db.Uuid
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Notification {
+  id         String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId   String              @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String              @db.Uuid
+  channel    NotificationChannel
+  type       NotificationType
+  title      String              @db.VarChar(300)
+  message    String              @db.VarChar(2000)
+  resource   String?             @db.VarChar(120)
+  resourceId String?             @db.VarChar(120)
+  status     NotificationStatus  @default(PENDING)
+  readAt     DateTime?
+  sentAt     DateTime?
+  failedAt   DateTime?
+  error      String?
+  metadata   Json?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([channel, status, createdAt])
+  @@index([resource, resourceId])
+}
+
+model NotificationSetting {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String   @unique @db.VarChar(100)
+  labelTh     String   @db.VarChar(200)
+  value       String?
+  isSecret    Boolean  @default(false)
+  description String?  @db.VarChar(500)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([isSecret])
+}
+
+model Vehicle {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId        String           @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  licensePlate    String?
+  brand           String?
+  model           String?
+  color           String?
+  vehicleType     String?
+  note            String?
+  status          MasterStatus     @default(ACTIVE)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+  vehicleRequests VehicleRequest[]
+
+  @@index([deletedAt])
+  @@index([status])
+}
+
+model VehicleFuelEntry {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId          String          @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vehicleUsageLogId String          @db.Uuid
+  fuelType          String          @db.VarChar(100)
+  liters            Decimal         @db.Decimal(10, 2)
+  pricePerLiter     Decimal?        @db.Decimal(10, 2)
+  amount            Decimal         @db.Decimal(12, 2)
+  receiptNo         String?         @db.VarChar(120)
+  note              String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  usageLog          VehicleUsageLog @relation(fields: [vehicleUsageLogId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleUsageLogId])
+}
+
+model VehicleRequest {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId       String               @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requesterId    String               @db.Uuid
+  departmentId   String?              @db.Uuid
+  vehicleId      String?              @db.Uuid
+  driverId       String?              @db.Uuid
+  departureAt    DateTime
+  returnAt       DateTime
+  destination    String               @db.VarChar(500)
+  purpose        String               @db.VarChar(1000)
+  passengerCount Int                  @default(1)
+  passengerNames String?
+  note           String?
+  status         VehicleRequestStatus @default(PENDING)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  departureDate  DateTime             @db.Date
+  departureTime  DateTime             @db.Time(6)
+  returnDate     DateTime             @db.Date
+  returnTime     DateTime             @db.Time(6)
+  evaluation     DriverEvaluation?
+  department     Department?          @relation(fields: [departmentId], references: [id])
+  driver         Driver?              @relation(fields: [driverId], references: [id])
+  requester      User                 @relation(fields: [requesterId], references: [id])
+  vehicle        Vehicle?             @relation(fields: [vehicleId], references: [id])
+  usageLog       VehicleUsageLog?
+
+  @@index([departmentId, departureAt])
+  @@index([departmentId, departureDate])
+  @@index([departureAt])
+  @@index([departureDate])
+  @@index([requesterId, departureAt])
+  @@index([requesterId, departureDate])
+  @@index([status, departureAt])
+  @@index([status, departureDate])
+}
+
+model VehicleUsageExpense {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId          String          @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vehicleUsageLogId String          @db.Uuid
+  type              String          @db.VarChar(100)
+  amount            Decimal         @db.Decimal(12, 2)
+  detail            String?
+  receiptNo         String?         @db.VarChar(120)
+  evidencePath      String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  usageLog          VehicleUsageLog @relation(fields: [vehicleUsageLogId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleUsageLogId])
+}
+
+model VehicleUsageLog {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId          String                @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vehicleRequestId  String                @unique @db.Uuid
+  driverId          String                @db.Uuid
+  actualDepartureAt DateTime?
+  actualReturnAt    DateTime?
+  odometerStart     Int
+  odometerEnd       Int?
+  preTripCheck      Json?
+  postTripCheck     Json?
+  hasIncident       Boolean               @default(false)
+  incidentDetail    String?
+  operationNote     String?
+  lockedAt          DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  fuelEntries       VehicleFuelEntry[]
+  expenses          VehicleUsageExpense[]
+  driver            Driver                @relation(fields: [driverId], references: [id])
+  vehicleRequest    VehicleRequest        @relation(fields: [vehicleRequestId], references: [id], onDelete: Cascade)
+
+  @@index([driverId, createdAt])
+}
+
+model MeetingRoom {
+  id           String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId     String                 @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String                 @unique @db.VarChar(50)
+  nameTh       String                 @db.VarChar(200)
+  location     String?                @db.VarChar(300)
+  capacity     Int                    @default(1)
+  description  String?                @db.VarChar(1000)
+  imagePath    String?
+  status       MasterStatus           @default(ACTIVE)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  deletedAt    DateTime?
+  departmentId String?                @db.Uuid
+  department   Department?            @relation(fields: [departmentId], references: [id])
+  bookings     MeetingBooking[]
+  equipment    MeetingRoomEquipment[]
+
+  @@index([status])
+  @@index([departmentId])
+  @@index([deletedAt])
+}
+
+model MeetingEquipment {
+  id               String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId         String                    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String                    @unique @db.VarChar(50)
+  nameTh           String                    @db.VarChar(200)
+  description      String?                   @db.VarChar(500)
+  status           MasterStatus              @default(ACTIVE)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  rooms            MeetingRoomEquipment[]
+  bookingEquipment MeetingBookingEquipment[]
+}
+
+model MeetingRoomEquipment {
+  roomId      String           @db.Uuid
+  equipmentId String           @db.Uuid
+  quantity    Int              @default(1)
+  note        String?
+  room        MeetingRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  equipment   MeetingEquipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, equipmentId])
+}
+
+model MeetingBooking {
+  id              String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId        String                    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roomId          String                    @db.Uuid
+  requesterId     String                    @db.Uuid
+  departmentId    String?                   @db.Uuid
+  title           String                    @db.VarChar(300)
+  purpose         String?                   @db.VarChar(1000)
+  attendeeCount   Int                       @default(1)
+  attendeeNames   String?
+  startAt         DateTime
+  endAt           DateTime
+  note            String?                   @db.VarChar(2000)
+  status          MeetingBookingStatus      @default(PENDING)
+  approvedById    String?                   @db.Uuid
+  approvedAt      DateTime?
+  preparedById    String?                   @db.Uuid
+  preparedAt      DateTime?
+  preparationStatus MeetingPreparationStatus @default(NOT_STARTED)
+  rejectionReason String?                   @db.VarChar(1000)
+  cancellationReason String?                @db.VarChar(1000)
+  cancelledAt     DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  room            MeetingRoom               @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  requester       User                      @relation("MeetingBooking_requester", fields: [requesterId], references: [id], onDelete: Restrict)
+  department      Department?               @relation(fields: [departmentId], references: [id])
+  approvedBy      User?                     @relation("MeetingBooking_approver", fields: [approvedById], references: [id], onDelete: SetNull)
+  preparedBy      User?                     @relation("MeetingBooking_preparer", fields: [preparedById], references: [id], onDelete: SetNull)
+  evaluation      MeetingBookingEvaluation? @relation("MeetingBooking_evaluation")
+  equipment       MeetingBookingEquipment[]
+
+  @@index([roomId, startAt, endAt])
+  @@index([requesterId, startAt])
+  @@index([departmentId, startAt])
+  @@index([status, startAt])
+}
+
+model MeetingBookingEvaluation {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicId String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId String @unique @db.Uuid
+  evaluatorId String @db.Uuid
+  equipmentReadiness Int
+  cleanliness Int
+  facilitationConvenience Int
+  roomSuitability Int
+  overallRating Int
+  issueCategory MeetingEvaluationIssue?
+  issueDetail String? @db.VarChar(1000)
+  comment String? @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  booking MeetingBooking @relation("MeetingBooking_evaluation", fields: [bookingId], references: [id], onDelete: Cascade)
+  evaluator User @relation("MeetingBookingEvaluation_evaluator", fields: [evaluatorId], references: [id], onDelete: Restrict)
+  @@index([evaluatorId, createdAt])
+  @@index([overallRating, createdAt])
+}
+
+model MeetingBookingEquipment {
+  bookingId   String           @db.Uuid
+  equipmentId String           @db.Uuid
+  quantity    Int              @default(1)
+  booking     MeetingBooking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  equipment   MeetingEquipment @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+
+  @@id([bookingId, equipmentId])
+  @@index([equipmentId])
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+  DENIED
+}
+
+enum MasterStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PermissionKey {
+  MANAGE_USERS
+  MANAGE_DRIVERS
+  MANAGE_VEHICLES
+  VIEW_AUDIT_LOG
+  MANAGE_DEPARTMENTS
+  MANAGE_VEHICLE_REQUESTS
+  MANAGE_DRIVER_EVALUATIONS
+  MANAGE_MEETING_ROOMS
+  MANAGE_MEETING_EQUIPMENT
+  MANAGE_MEETING_BOOKINGS
+  APPROVE_MEETING_BOOKINGS
+  VIEW_MEETING_REPORTS
+}
+
+enum RoleKey {
+  SUPER_ADMIN
+  ADMIN
+  USER
+  VEHICLE_APPROVER
+  DRIVER_EVALUATION_REVIEWER
+  MEETING_APPROVER
+  DRIVER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MeetingPreparationStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  READY
+}
+
+enum MeetingEvaluationIssue {
+  EQUIPMENT
+  CLEANLINESS
+  AIR_CONDITIONING
+  AUDIO
+  PROJECTOR
+  INTERNET
+  PREPARATION
+  OTHER
+}
+
+enum MeetingBookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum VehicleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  ASSIGNED
+  IN_PROGRESS
+}
+
+enum NotificationChannel {
+  IN_APP
+  MOHP_NOTIFY
+}
+
+enum NotificationType {
+  MEETING_BOOKING_CREATED
+  MEETING_BOOKING_UPDATED
+  MEETING_BOOKING_CANCELLED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  READ
+  FAILED
+}

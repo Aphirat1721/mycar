@@ -1,0 +1,5 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/modules/identity/session";
+import { prisma } from "@/lib/prisma";
+import MeetingEvaluationForm from "@/components/meeting-evaluation-form";
+export default async function Page({params}:{params:Promise<{id:string}>}){const user=await getCurrentUser();if(!user)redirect('/login');const {id}=await params;const booking=await prisma.meetingBooking.findUnique({where:{publicId:id},include:{room:{select:{nameTh:true}},evaluation:true}});if(!booking||booking.requesterId!==user.id||booking.status!=='COMPLETED')redirect('/portal/meeting-rooms/my-bookings');return <section><div className='mb-6'><p className='text-sm font-bold tracking-[0.14em] text-teal-700'>MEETING ROOM</p><h1 className='mt-1 text-3xl font-black text-slate-900'>ประเมินความพึงพอใจ</h1><p className='mt-2 text-sm text-slate-500'>{booking.room.nameTh} · {booking.title}</p></div><MeetingEvaluationForm bookingId={booking.publicId} initial={booking.evaluation}/></section>}

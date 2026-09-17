@@ -1,0 +1,6 @@
+import Link from "next/link";
+import { requireAdmin } from "@/lib/authorization";
+import { prisma } from "@/lib/prisma";
+import { ArrowLeft } from "lucide-react";
+import ModulesManager from "@/components/modules-manager";
+export default async function ModulesPage(){await requireAdmin();const applications=await prisma.application.findMany({orderBy:[{sortOrder:"asc"},{code:"asc"}],select:{publicId:true,code:true,nameTh:true,description:true,iconKey:true,basePath:true,status:true,sortOrder:true}});return <section className="mx-auto max-w-6xl"><div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold tracking-[0.14em] text-teal-700">SYSTEM SETTINGS / MODULES</p><h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">จัดการโมดูลระบบ</h1><p className="mt-2 text-sm leading-6 text-slate-500">เปิดหรือปิดการให้บริการโมดูลทั้งระบบ โดยไม่ต้องลบสิทธิ์ของผู้ใช้งาน</p></div><Link href="/portal" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"><ArrowLeft size={17}/>กลับหน้า Portal</Link></div><ModulesManager initialApplications={applications}/></section>}

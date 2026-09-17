@@ -1,0 +1,60 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+
+# next.js
+/.next/
+/out/
+/build/
+
+# environment
+.env*
+
+# generated
+/src/generated/
+
+# private uploaded files
+/storage/drivers/
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vercel
+
+# local development and backups
+/.agents/
+/.serena/
+/.tools/
+/__pycache__/
+/.venv/
+/tmp/
+*.log
+*.bak
+*.pyc
+/bk_db/
+*.tar
+*.dump
+/ref/
+/*.xlsx
+/*.docx
+/PROJECT_STATE_SNAPSHOT_*.md
+/WORK_CONTINUATION_*.md
+/update.txt
+
+# local-only project management files
+/.agents/
+/.serena/
+/.tools/
+/config/tunnel/
+/*.py
+/*.pyw
+/*.bat
+/*.ico
+/tunnel-client.exe

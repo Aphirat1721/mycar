@@ -1,0 +1,12 @@
+CREATE TYPE "MeetingPreparationStatus" AS ENUM ('NOT_STARTED', 'IN_PROGRESS', 'READY');
+CREATE TYPE "MeetingEvaluationIssue" AS ENUM ('EQUIPMENT', 'CLEANLINESS', 'AIR_CONDITIONING', 'AUDIO', 'PROJECTOR', 'INTERNET', 'PREPARATION', 'OTHER');
+ALTER TABLE "MeetingBooking" ADD COLUMN "preparedById" UUID, ADD COLUMN "preparedAt" TIMESTAMP(3), ADD COLUMN "preparationStatus" "MeetingPreparationStatus" NOT NULL DEFAULT 'NOT_STARTED';
+ALTER TABLE "MeetingBooking" ADD CONSTRAINT "MeetingBooking_preparedById_fkey" FOREIGN KEY ("preparedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+CREATE INDEX "MeetingBooking_preparedById_idx" ON "MeetingBooking"("preparedById");
+CREATE TABLE "MeetingBookingEvaluation" ("id" UUID NOT NULL, "publicId" UUID NOT NULL, "bookingId" UUID NOT NULL, "evaluatorId" UUID NOT NULL, "equipmentReadiness" INTEGER NOT NULL, "cleanliness" INTEGER NOT NULL, "facilitationConvenience" INTEGER NOT NULL, "roomSuitability" INTEGER NOT NULL, "overallRating" INTEGER NOT NULL, "issueCategory" "MeetingEvaluationIssue", "issueDetail" VARCHAR(1000), "comment" VARCHAR(2000), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "MeetingBookingEvaluation_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "MeetingBookingEvaluation_publicId_key" ON "MeetingBookingEvaluation"("publicId");
+CREATE UNIQUE INDEX "MeetingBookingEvaluation_bookingId_key" ON "MeetingBookingEvaluation"("bookingId");
+CREATE INDEX "MeetingBookingEvaluation_evaluatorId_createdAt_idx" ON "MeetingBookingEvaluation"("evaluatorId", "createdAt");
+CREATE INDEX "MeetingBookingEvaluation_overallRating_createdAt_idx" ON "MeetingBookingEvaluation"("overallRating", "createdAt");
+ALTER TABLE "MeetingBookingEvaluation" ADD CONSTRAINT "MeetingBookingEvaluation_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "MeetingBooking"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "MeetingBookingEvaluation" ADD CONSTRAINT "MeetingBookingEvaluation_evaluatorId_fkey" FOREIGN KEY ("evaluatorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

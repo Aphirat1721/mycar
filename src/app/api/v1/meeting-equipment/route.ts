@@ -1,0 +1,6 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/authorization";
+async function nextEquipmentCode(){const rows=await prisma.meetingEquipment.findMany({select:{code:true}});const used=new Set(rows.map(r=>Number(r.code.match(/^EQ-(\d{2})$/)?.[1]??0)).filter(n=>n>=1&&n<=99));const next=Array.from({length:99},(_,i)=>i+1).find(n=>!used.has(n));if(!next)throw new Error("ไม่สามารถสร้างรหัสอุปกรณ์ EQ-xx ได้ เนื่องจากมีรหัสครบ EQ-01 ถึง EQ-99 แล้ว");return `EQ-${String(next).padStart(2,"0")}`;}
+export async function GET(){const equipment=await prisma.meetingEquipment.findMany({orderBy:{nameTh:"asc"},select:{publicId:true,code:true,nameTh:true,description:true,status:true}});return NextResponse.json({equipment});}
+export async function POST(request:Request){try{await requireAdmin();const b=await request.json();const nameTh=String(b.nameTh||"").trim();if(!nameTh)return NextResponse.json({error:"กรุณาระบุชื่ออุปกรณ์"},{status:400});const code=await nextEquipmentCode();const row=await prisma.meetingEquipment.create({data:{code,nameTh,description:b.description?String(b.description):null,status:"ACTIVE",updatedAt:new Date()}});return NextResponse.json({data:row},{status:201});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"ไม่สามารถบันทึกได้"},{status:400});}}

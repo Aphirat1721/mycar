@@ -1,0 +1,15 @@
+﻿node_modules
+.next
+.venv
+.git
+.serena
+.tools
+.agents
+__pycache__
+tmp
+*.log
+.env
+.env.*
+!.env.example
+bk_db
+storage
