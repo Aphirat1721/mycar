@@ -159,41 +159,56 @@ export async function authenticateProviderCode(code: string) {
   const cidHash = profile.cid ? sha256(profile.cid) : null;
   const cidCiphertext = profile.cid ? encrypt(profile.cid) : null;
 
-  const user = await prisma.user.upsert({
-    where: { accountIdHash },
-    create: {
-      accountIdHash,
-      accountIdCiphertext: encrypt(profile.account_id),
-      providerIdHash: profile.provider_id ? sha256(profile.provider_id) : null,
-      providerIdCiphertext: profile.provider_id ? encrypt(profile.provider_id) : null,
-      cidHash,
-      cidCiphertext,
-      titleTh: profile.title_th ?? null,
-      firstnameTh: profile.firstname_th ?? null,
-      lastnameTh: profile.lastname_th ?? null,
-      nameTh: profile.name_th ?? null,
-      position: organization.position ?? null,
-      organizationHcode: organization.hcode ?? hcode,
-      organizationName: organization.hname_th ?? null,
-      lastLoginAt: new Date(),
-    },
-    update: {
-      accountIdCiphertext: encrypt(profile.account_id),
-      providerIdHash: profile.provider_id ? sha256(profile.provider_id) : undefined,
-      providerIdCiphertext: profile.provider_id ? encrypt(profile.provider_id) : undefined,
-      cidHash: cidHash ?? undefined,
-      cidCiphertext: cidCiphertext ?? undefined,
-      titleTh: profile.title_th ?? null,
-      firstnameTh: profile.firstname_th ?? null,
-      lastnameTh: profile.lastname_th ?? null,
-      nameTh: profile.name_th ?? null,
-      position: organization.position ?? null,
-      organizationHcode: organization.hcode ?? hcode,
-      organizationName: organization.hname_th ?? null,
-      status: "ACTIVE",
-      lastLoginAt: new Date(),
-    },
-  });
+  const existingByAccount = await prisma.user.findUnique({ where: { accountIdHash } });
+  const existingByCid = cidHash
+    ? await prisma.user.findUnique({ where: { cidHash } })
+    : null;
+
+  if (existingByAccount && existingByCid && existingByAccount.id !== existingByCid.id) {
+    throw new Error("PROVIDER_IDENTITY_CONFLICT");
+  }
+
+  const existingUser = existingByAccount ?? existingByCid;
+
+  const user = existingUser
+    ? await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          accountIdHash,
+          accountIdCiphertext: encrypt(profile.account_id),
+          providerIdHash: profile.provider_id ? sha256(profile.provider_id) : undefined,
+          providerIdCiphertext: profile.provider_id ? encrypt(profile.provider_id) : undefined,
+          cidHash: cidHash ?? undefined,
+          cidCiphertext: cidCiphertext ?? undefined,
+          titleTh: profile.title_th ?? null,
+          firstnameTh: profile.firstname_th ?? null,
+          lastnameTh: profile.lastname_th ?? null,
+          nameTh: profile.name_th ?? null,
+          position: organization.position ?? null,
+          organizationHcode: organization.hcode ?? hcode,
+          organizationName: organization.hname_th ?? null,
+          status: "ACTIVE",
+          lastLoginAt: new Date(),
+        },
+      })
+    : await prisma.user.create({
+        data: {
+          accountIdHash,
+          accountIdCiphertext: encrypt(profile.account_id),
+          providerIdHash: profile.provider_id ? sha256(profile.provider_id) : null,
+          providerIdCiphertext: profile.provider_id ? encrypt(profile.provider_id) : null,
+          cidHash,
+          cidCiphertext,
+          titleTh: profile.title_th ?? null,
+          firstnameTh: profile.firstname_th ?? null,
+          lastnameTh: profile.lastname_th ?? null,
+          nameTh: profile.name_th ?? null,
+          position: organization.position ?? null,
+          organizationHcode: organization.hcode ?? hcode,
+          organizationName: organization.hname_th ?? null,
+          lastLoginAt: new Date(),
+        },
+      });
 
   try {
     const existing = await prisma.userProviderIdentity.findUnique({
