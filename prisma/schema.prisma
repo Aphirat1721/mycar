@@ -504,6 +504,7 @@ model MeetingBooking {
   @@index([roomId, startAt, endAt])
   @@index([requesterId, startAt])
   @@index([departmentId, startAt])
+  @@index([preparedById])
   @@index([status, startAt])
 }
 
