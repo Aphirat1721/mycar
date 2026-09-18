@@ -2,6 +2,8 @@ import { ArrowRight, CalendarDays, CarFront, ClipboardList, LayoutGrid, ShieldCh
 import PublicHomeRequestColumns from "@/components/public-home-request-columns";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 function startOfToday() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
