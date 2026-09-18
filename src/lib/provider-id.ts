@@ -159,16 +159,9 @@ export async function authenticateProviderCode(code: string) {
   const cidHash = profile.cid ? sha256(profile.cid) : null;
   const cidCiphertext = profile.cid ? encrypt(profile.cid) : null;
 
-  const existingByAccount = await prisma.user.findUnique({ where: { accountIdHash } });
-  const existingByCid = cidHash
-    ? await prisma.user.findUnique({ where: { cidHash } })
-    : null;
-
-  if (existingByAccount && existingByCid && existingByAccount.id !== existingByCid.id) {
-    throw new Error("PROVIDER_IDENTITY_CONFLICT");
-  }
-
-  const existingUser = existingByAccount ?? existingByCid;
+  // Provider ID account_id is the primary login identity.
+  // CID is stored as verified identity data, but MUST NOT be used to merge users.
+  const existingUser = await prisma.user.findUnique({ where: { accountIdHash } });
 
   const user = existingUser
     ? await prisma.user.update({

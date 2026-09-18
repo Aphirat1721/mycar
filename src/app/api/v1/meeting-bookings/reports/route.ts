@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/modules/identity/session";
-import { hasPermission } from "@/lib/authorization";
+import { hasApplicationRole, hasPermission } from "@/lib/authorization";
 import type { Prisma } from "@/generated/prisma/client";
 
 type PersonLike = { id?: string; publicId?: string; nameTh?: string | null; firstnameTh?: string | null; lastnameTh?: string | null };
@@ -29,8 +29,8 @@ const rangeFor = (from: string | null, to: string | null) => {
 export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-  const admin = user.roles.some(({ role }) => ["SUPER_ADMIN", "ADMIN"].includes(role.key));
-  if (!admin && !(await hasPermission(user.id, "VIEW_MEETING_REPORTS"))) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  const admin = await hasApplicationRole(user.id, "MEETING_ROOMS");
+  if (!admin && !(await hasPermission(user.id, "VIEW_MEETING_REPORTS", "MEETING_ROOMS"))) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
   const q = new URL(req.url).searchParams;
   const from = q.get("from");

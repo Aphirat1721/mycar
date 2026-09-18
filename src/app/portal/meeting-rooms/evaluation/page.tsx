@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/modules/identity/session";
-import { hasPermission } from "@/lib/authorization";
+import { hasApplicationRole, hasPermission } from "@/lib/authorization";
 import { hasApplicationAccess } from "@/modules/portal/applications";
 import { prisma } from "@/lib/prisma";
 import DatePicker from "@/components/date-picker";
@@ -11,8 +11,8 @@ export default async function Page() {
   if (!user) redirect("/login");
   const access = await hasApplicationAccess(user.id, "MEETING_ROOMS");
   if (!access) redirect("/portal/meeting-rooms");
-  const admin = user.roles.some(({ role }) => ["SUPER_ADMIN", "ADMIN"].includes(role.key));
-  const report = admin || await hasPermission(user.id, "VIEW_MEETING_REPORTS");
+  const admin = await hasApplicationRole(user.id, "MEETING_ROOMS");
+  const report = admin || await hasPermission(user.id, "VIEW_MEETING_REPORTS", "MEETING_ROOMS");
   const now = new Date(); const monthStart = new Date(now.getFullYear(), now.getMonth(), 1); const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
   const [mine, rooms, preparers, rows] = await Promise.all([
     prisma.meetingBooking.findMany({ where: { requesterId: user.id, status: "COMPLETED", cancelledAt: null }, orderBy: { startAt: "desc" }, take: 20, include: { room: { select: { nameTh: true } }, evaluation: { select: { publicId: true, overallRating: true } } } }),

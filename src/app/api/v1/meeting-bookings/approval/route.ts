@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/modules/identity/session";
-import { hasPermission } from "@/lib/authorization";
+import { hasApplicationRole, hasPermission } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { buildMeetingNotificationMessage, createMeetingBookingNotification, sendMophNotifyMeetingEvent } from "@/lib/notifications";
 import { createMeetingPublicUrl, getPublicOrigin } from "@/lib/meeting-public-link";
 
-async function requireMeetingManager() { const user = await getCurrentUser(); if (!user) return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) } as const; const isAdmin = user.roles.some(({role}) => ["SUPER_ADMIN","ADMIN"].includes(role.key)); if (!isAdmin && !(await hasPermission(user.id, "APPROVE_MEETING_BOOKINGS"))) return { error: NextResponse.json({ error: "FORBIDDEN" }, { status: 403 }) } as const; return { user } as const; }
+async function requireMeetingManager() { const user = await getCurrentUser(); if (!user) return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) } as const; const isAdmin = await hasApplicationRole(user.id,"MEETING_ROOMS"); if (!isAdmin && !(await hasPermission(user.id, "APPROVE_MEETING_BOOKINGS"))) return { error: NextResponse.json({ error: "FORBIDDEN" }, { status: 403 }) } as const; return { user } as const; }
 function getRequesterName(user: { nameTh: string | null; firstnameTh: string | null; lastnameTh: string | null }) { return user.nameTh?.trim() || [user.firstnameTh, user.lastnameTh].filter(Boolean).join(" ").trim() || null; }
 
 export async function GET() { const auth = await requireMeetingManager(); if ("error" in auth) return auth.error; const bookings = await prisma.meetingBooking.findMany({ where: { status: { in: ["PENDING","APPROVED","REJECTED","CANCELLED"] } }, orderBy: { startAt: "asc" }, include: { room: { select: { publicId: true, nameTh: true, location: true, capacity: true } }, requester: { select: { nameTh: true, firstnameTh: true, lastnameTh: true, department: { select: { nameTh: true } } } } } }); return NextResponse.json({ bookings }); }

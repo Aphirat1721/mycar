@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { CalendarDays, ClipboardList, DoorOpen, Plus, ArrowLeft, Settings, UserCircle, ShieldCheck, ListChecks } from "lucide-react";
 import { getCurrentUser } from "@/modules/identity/session";
-import { hasPermission } from "@/lib/authorization";
+import { hasApplicationRole, hasPermission } from "@/lib/authorization";
 import { hasApplicationAccess } from "@/modules/portal/applications";
 import { redirect } from "next/navigation";
 
 export default async function MeetingLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   const displayName = user?.nameTh || [user?.firstnameTh, user?.lastnameTh].filter(Boolean).join(" ") || "ผู้ใช้งาน";
-  const isAdmin = !!user && user.roles.some(({role}) => ["SUPER_ADMIN","ADMIN"].includes(role.key));
-  const canApprove = user ? isAdmin || await hasPermission(user.id, "APPROVE_MEETING_BOOKINGS") : false;
-  const canReport = user ? isAdmin || await hasPermission(user.id, "VIEW_MEETING_REPORTS") : false;
+  const isAdmin = !!user && await hasApplicationRole(user.id, "MEETING_ROOMS");
+  const canApprove = user ? isAdmin || await hasPermission(user.id, "APPROVE_MEETING_BOOKINGS", "MEETING_ROOMS") : false;
+  const canReport = user ? isAdmin || await hasPermission(user.id, "VIEW_MEETING_REPORTS", "MEETING_ROOMS") : false;
   const canAccess = user ? await hasApplicationAccess(user.id, "MEETING_ROOMS") : false;
   if (user && !canAccess && !isAdmin) redirect("/portal");
   return <div className="min-h-screen bg-slate-50">

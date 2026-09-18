@@ -177,7 +177,7 @@ model User {
   accountIdCiphertext     String
   providerIdHash          String?               @unique @db.VarChar(64)
   providerIdCiphertext    String?
-  cidHash                 String?               @unique @db.VarChar(64)
+  cidHash                 String?               @db.VarChar(64)
   cidCiphertext           String?
   titleTh                 String?
   firstnameTh             String?
@@ -211,6 +211,7 @@ model User {
   @@index([departmentId])
   @@index([organizationHcode])
   @@index([status])
+  @@index([cidHash])
 }
 
 model UserProviderIdentity {
@@ -219,7 +220,7 @@ model UserProviderIdentity {
   userId                String    @unique @db.Uuid
   providerAccountIdHash String    @unique @db.VarChar(64)
   providerIdHash        String?   @unique @db.VarChar(64)
-  cidHash               String?   @unique @db.VarChar(64)
+  cidHash               String?   @db.VarChar(64)
   cidCiphertext         String?
   source                String    @default("PROVIDER_ID") @db.VarChar(50)
   firstCapturedAt       DateTime?
@@ -229,6 +230,7 @@ model UserProviderIdentity {
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([source, lastVerifiedAt])
+  @@index([cidHash])
 }
 
 model UserApplication {
