@@ -10,6 +10,7 @@ export default async function MeetingLayout({ children }: { children: React.Reac
   const displayName = user?.nameTh || [user?.firstnameTh, user?.lastnameTh].filter(Boolean).join(" ") || "ผู้ใช้งาน";
   const isAdmin = !!user && await hasApplicationRole(user.id, "MEETING_ROOMS");
   const canApprove = user ? isAdmin || await hasPermission(user.id, "APPROVE_MEETING_BOOKINGS", "MEETING_ROOMS") : false;
+  const canManageStatus = user ? isAdmin || await hasPermission(user.id, "MANAGE_MEETING_BOOKINGS", "MEETING_ROOMS") : false;
   const canReport = user ? isAdmin || await hasPermission(user.id, "VIEW_MEETING_REPORTS", "MEETING_ROOMS") : false;
   const canAccess = user ? await hasApplicationAccess(user.id, "MEETING_ROOMS") : false;
   if (user && !canAccess && !isAdmin) redirect("/portal");
@@ -24,7 +25,7 @@ export default async function MeetingLayout({ children }: { children: React.Reac
       <Link href="/portal/meeting-rooms/book" className="flex h-12 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-700"><Plus size={17}/>จองห้องประชุม</Link>
       <Link href="/portal/meeting-rooms/my-bookings" className="flex h-12 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-700"><ClipboardList size={17}/>รายการจองของฉัน</Link>
       {canReport ? <Link href="/portal/meeting-rooms/reports" className="flex h-12 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-bold text-blue-700 hover:bg-blue-50"><ListChecks size={17}/>รายงาน</Link> : null}
-      {canApprove ? <><Link href="/portal/meeting-rooms/approval" className="flex h-12 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-teal-700 hover:bg-teal-50"><ShieldCheck size={17}/>อนุมัติการจอง</Link><Link href="/portal/meeting-rooms/status" className="flex h-12 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-teal-700 hover:bg-teal-50"><ListChecks size={17}/>จัดการสถานะการจอง</Link></> : null}
+      {canApprove ? <Link href="/portal/meeting-rooms/approval" className="flex h-12 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-teal-700 hover:bg-teal-50"><ShieldCheck size={17}/>อนุมัติการจอง</Link> : null}{canManageStatus ? <Link href="/portal/meeting-rooms/status" className="flex h-12 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-teal-700 hover:bg-teal-50"><ListChecks size={17}/>จัดการสถานะการจอง</Link> : null}
       {isAdmin ? <Link href="/portal/meeting-rooms/settings" className="ml-auto flex h-12 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-700"><Settings size={17}/>ตั้งค่า</Link> : null}
     </div></nav><main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">{children}</main></div>;
 }

@@ -266,4 +266,38 @@ async function ensureDefaultRole(userId: string) {
   await prisma.userApplication.create({ data: { userId, applicationId: application.id, createdAt: now, updatedAt: now } }).catch(() => undefined);
   const meeting = await prisma.application.findUnique({ where: { code: "MEETING_ROOMS" }, select: { id: true } });
   if (meeting) await prisma.userApplication.create({ data: { userId, applicationId: meeting.id, createdAt: now, updatedAt: now } }).catch(() => undefined);
+
+  await ensureSpecialRoles(userId);
+}
+
+export async function ensureSpecialRoles(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { nameTh: true, department: { select: { nameTh: true } } },
+  });
+  if (!user) return;
+
+  const isSuperAdmin = user.nameTh?.trim() === "อภิรัฐ พิมพ์เขต";
+  const isItCenter = user.department?.nameTh?.trim() === "ศูนย์คอมพิวเตอร์ (IT Center)";
+
+  if (!isSuperAdmin && !isItCenter) return;
+
+  const applications = await prisma.application.findMany({
+    where: { status: "ACTIVE" },
+    select: { id: true },
+  });
+
+  for (const app of applications) {
+    const roleKey = isSuperAdmin ? "SUPER_ADMIN" : "ADMIN";
+    const roleName = isSuperAdmin ? "ผู้ดูแลระบบสูงสุด" : "ผู้ดูแลระบบ";
+    const role = await prisma.role.upsert({
+      where: { applicationId_key: { applicationId: app.id, key: roleKey } },
+      create: { applicationId: app.id, key: roleKey, nameTh: roleName },
+      update: {},
+    });
+    await prisma.userRole.create({ data: { userId, roleId: role.id } }).catch(() => undefined);
+    await prisma.userApplication.create({
+      data: { userId, applicationId: app.id, createdAt: new Date(), updatedAt: new Date() },
+    }).catch(() => undefined);
+  }
 }

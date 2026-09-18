@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSuperAdmin } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
+import { ensureSpecialRoles } from "@/lib/provider-id";
 
 const schema = z.object({ departmentId: z.string().uuid().nullable() });
 
@@ -20,6 +21,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       internalDepartmentId = department.id;
     }
     await prisma.user.update({ where: { id: user.id }, data: { departmentId: internalDepartmentId } });
+    await ensureSpecialRoles(user.id);
     await audit({ userId: actor.id, action: "UPDATE", resource: "USER_DEPARTMENT", resourceId: id, result: "SUCCESS", metadata: { departmentId: body.departmentId } });
     return NextResponse.json({ ok: true });
   } catch (error) {
